@@ -5,14 +5,15 @@ import BuildTerm
 import FoldTerm
 
 eval :: Term -> TermB s Term 
-eval = foldTermB \case
-  TVar x        -> term (TVar x)
-  TBool b       -> term (TBool b)
-  TInt n        -> term (TInt n)
-  TRat r        -> term (TRat r)
-  TOp1 op (_,t) -> evalOp1 op t
-  TOp2 op (_,t1) (_,t2) -> evalOp2 op t1 t2
-  TITE (_,t1) (_,t2) (_,t3) -> evalITE t1 t2 t3
+eval = foldTermB \self sub ->
+  case sub of
+    TVar {}       -> pure self
+    TBool {}      -> pure self
+    TInt {}       -> pure self
+    TRat {}       -> pure self
+    TOp1 op t     -> evalOp1 op t
+    TOp2 op t1 t2 -> evalOp2 op t1 t2
+    TITE t1 t2 t3 -> evalITE t1 t2 t3
 
 evalITE :: Term -> Term -> Term -> TermB s Term
 evalITE cond t2 t3 =
