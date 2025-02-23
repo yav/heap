@@ -4,6 +4,7 @@ module PPTerm
   ) where
 
 import Prelude hiding ((<>))
+import Data.Ratio(numerator,denominator)
 import Text.PrettyPrint
 import Term
 import FoldTerm
@@ -18,6 +19,7 @@ opPrec term =
     TVar {} -> ("TVar",-1)
     TBool {} -> ("TBool",-1)
     TInt {} -> ("TInt",-1)
+    TRat {} -> ("TRat",-1)
     TOp1 op _ ->
       case op of
         Not -> ("!",2)
@@ -42,6 +44,7 @@ ppTerm = foldTerm \self ->
     TVar x     -> ppTVarName x
     TBool x    -> if x then "true" else "false"
     TInt n     -> integer n
+    TRat r     -> braces (integer (numerator r) <> comma <+> integer (denominator r))
     TOp1 _ (t,d) ->
       let (opD,mine) = opPrec self
           (_,sub)    = opPrec (termF t)

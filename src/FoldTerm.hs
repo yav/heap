@@ -25,6 +25,7 @@ foldTermB f t0 = withUser mempty (go t0)
              TVar x -> doWork (TVar x)
              TBool b -> doWork (TBool b)
              TInt n -> doWork (TInt n)
+             TRat r -> doWork (TRat r)
              TOp1 op t ->
                do x <- go t
                   doWork (TOp1 op (t,x))

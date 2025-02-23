@@ -23,7 +23,8 @@ library
     import: settings
     exposed-modules:
       SimpleTerm, Term,
-        BuildTerm, FoldTerm, EvalTerm, PPTerm
+        BuildTerm, FoldTerm, EvalTerm, PPTerm,
+        Heap
       
     build-depends:    base, containers, pretty
     hs-source-dirs:   src
