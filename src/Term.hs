@@ -5,7 +5,7 @@ module Term
   , T.Term, termId, termF
   ) where
 
-import SimpleTerm qualified as T
+import PrimTerm qualified as T
 
 
 termId :: T.Term -> Int

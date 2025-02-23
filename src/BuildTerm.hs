@@ -12,7 +12,7 @@ import Data.Map.Strict(Map)
 import Data.Map.Strict qualified as Map
 import Control.Monad(liftM,ap)
 
-import SimpleTerm
+import PrimTerm
 
 type KnownTerms = Map (TermF Term) Term
 

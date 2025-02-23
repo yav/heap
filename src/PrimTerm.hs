@@ -1,5 +1,4 @@
-module SimpleTerm where
-
+module PrimTerm where
 
 newtype TVarName = TVarName Int
   deriving (Eq,Ord)
