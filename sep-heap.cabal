@@ -24,6 +24,7 @@ library
     exposed-modules:
       PrimTerm, Term,
       BuildTerm, FoldTerm, EvalTerm, PPTerm,
+      Subst,
       Heap
       
     build-depends:    base, containers, pretty
