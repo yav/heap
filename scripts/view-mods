@@ -1,0 +1,12 @@
+#!/bin/bash
+
+PDF_FILE=deps.pdf
+
+DOT_FILE=$(mktemp)
+trap "rm $DOT_FILE" EXIT
+graphmod > "$DOT_FILE"
+dot -T pdf -o "$PDF_FILE" "$DOT_FILE"
+
+echo xdg-open "$PDF_FILE"
+
+

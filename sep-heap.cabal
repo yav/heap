@@ -1,0 +1,41 @@
+cabal-version:      3.0
+name:               sep-heap
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            ISC
+license-file:       LICENSE
+author:             Iavor S. Diatchki
+maintainer:         iavor.diatchki@gmail.com
+-- copyright:
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common settings
+    ghc-options: -Wall
+    default-extensions:
+      ImportQualifiedPost, BlockArguments, NamedFieldPuns, LambdaCase,
+      OverloadedStrings,
+      UnboxedTuples, BangPatterns
+
+library
+    import: settings
+    exposed-modules:
+      SimpleTerm, Term,
+        BuildTerm, FoldTerm, EvalTerm, PPTerm
+      
+    build-depends:    base, containers, pretty
+    hs-source-dirs:   src
+    default-language: Haskell2010
+
+executable sep-heap
+    import:           settings
+    main-is:          Main.hs
+    -- other-modules:
+    build-depends:
+        base ^>=4.20.0.0,
+        sep-heap
+
+    hs-source-dirs:   app
+    default-language: Haskell2010

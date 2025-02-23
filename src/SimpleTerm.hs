@@ -1,15 +1,17 @@
 module SimpleTerm where
 
+
 newtype TVarName = TVarName Int
-  deriving Eq
+  deriving (Eq,Ord)
 
 data Op1  = Neg | Not
-  deriving Eq
+  deriving (Eq,Ord)
 
 data Op2  = Add | Sub | Mul | Div | Mod
           | Eq | Leq | Lt
           | And | Or
-  deriving Eq
+  deriving (Eq,Ord)
+
 
 data TermF term =
     TVar !TVarName
@@ -18,11 +20,23 @@ data TermF term =
   | TOp1 !Op1 !term
   | TOp2 !Op2 !term !term
   | TITE !term !term !term
-    deriving (Eq, Functor, Foldable, Traversable)
+    deriving (Eq,Ord)
+  
+data Term = Term
+  { termId :: !Int
+  , termF  :: TermF Term
+  }
 
-newtype Term = Term (TermF Term)
-  deriving Eq
+instance Eq Term where
+  x == y = termId x == termId y
 
+instance Ord Term where
+  compare x y = compare (termId x) (termId y)
+
+
+
+
+{-
 var :: Int -> Term
 var n = Term (TVar (TVarName n))
 
@@ -67,5 +81,5 @@ x .&& y = Term (TOp2 And x y)
 
 (.||) :: Term -> Term -> Term
 x .|| y = Term (TOp2 Or x y)
-
+-}
 
