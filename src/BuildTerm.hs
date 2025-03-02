@@ -1,5 +1,5 @@
 module BuildTerm
-  ( TermContext(..)
+  ( TermContext 
   , TermB, term
   , build, buildInContext
   , getContext

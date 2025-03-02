@@ -1,8 +1,11 @@
 
 module Term
-  ( T.TermF(..)
-  , T.TVarName(..), T.Op1(..), T.Op2(..)
+  ( T.Type(..)
+  , T.TermF(..)
+  , T.TVarName(..), T.TFunName(..)
+  , T.Op1(..), T.Op2(..)
   , T.Term, termId, termF
+  , T.TypeOf(..)
   ) where
 
 import PrimTerm qualified as T

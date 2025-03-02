@@ -17,7 +17,8 @@ common settings
     default-extensions:
       ImportQualifiedPost, BlockArguments, NamedFieldPuns, LambdaCase,
       OverloadedStrings,
-      UnboxedTuples, BangPatterns
+      UnboxedTuples, BangPatterns,
+      ImplicitParams
 
 library
     import: settings

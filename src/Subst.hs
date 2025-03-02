@@ -11,12 +11,12 @@ import FoldTerm
 newtype Subst = Subst (IntMap Term)
 
 substFromList :: [(TVarName,Term)] -> Subst
-substFromList xs = Subst (IntMap.fromList [ (n,t) | (TVarName n, t) <- xs ])
+substFromList xs = Subst (IntMap.fromList [ (n,t) | (TVarName n _, t) <- xs ])
 
 apSubst :: Subst -> Term -> TermB s Term
 apSubst (Subst su) = foldTermB \self selfF ->
   case selfF of
-    TVar (TVarName x) ->
+    TVar (TVarName x _) ->
       case IntMap.lookup x su of
         Just t -> pure t
         Nothing -> pure self
