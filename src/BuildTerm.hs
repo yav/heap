@@ -1,8 +1,13 @@
 module BuildTerm
-  ( TermContext 
-  , TermB, term
-  , build, buildInContext
+  ( -- * Building terms
+    term, build, TermB
+   
+  -- * Context
+  , buildInContext
   , getContext
+  , TermContext 
+
+  -- * User state
   , getUser, setUser, updUser
   , withUser, liftUser
   )
@@ -13,6 +18,7 @@ import Data.Map.Strict qualified as Map
 import Control.Monad(liftM,ap)
 
 import PrimTerm
+import EvalTerm
 
 type KnownTerms = Map (TermF Term) Term
 
@@ -57,10 +63,15 @@ term tf = TermB \i known s ->
   case Map.lookup tf known of
     Just t -> (# t, i, known, s #)
     Nothing ->
-      let t       = Term { termId = i, termF = tf }
-          !i1     = i + 1
-          !known1 = Map.insert tf t known
-      in (# t, i1, known1, s #)
+      let TermB m = evalBuild doBuild tf
+      in m i known s
+
+doBuild :: TermF Term -> TermB s Term
+doBuild tf = TermB \i known s ->
+  let t       = Term { termId = i, termF = tf }
+      !i1     = i + 1
+      !known1 = Map.insert tf t known
+  in (# t, i1, known1, s #)
 
 getContext :: TermB s TermContext
 getContext = TermB \i known s ->

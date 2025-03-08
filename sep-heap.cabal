@@ -18,15 +18,18 @@ common settings
       ImportQualifiedPost, BlockArguments, NamedFieldPuns, LambdaCase,
       OverloadedStrings,
       UnboxedTuples, BangPatterns,
-      ImplicitParams
+      ImplicitParams,
+      DeriveFunctor
 
 library
     import: settings
     exposed-modules:
-      PrimTerm, Term,
-      BuildTerm, FoldTerm, EvalTerm, PPTerm,
+      Term,
+      BuildTerm, FoldTerm, PPTerm,
       Subst,
       Heap
+    other-modules:
+      PrimTerm, EvalTerm
       
     build-depends:    base, containers, pretty
     hs-source-dirs:   src

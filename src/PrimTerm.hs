@@ -38,7 +38,7 @@ data TermF term =
   | TOp1 !Op1 !term
   | TOp2 !Op2 !term !term
   | TITE !term !term !term
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Functor)
   
 data Term = Term
   { termId :: !Int
