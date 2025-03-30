@@ -4,10 +4,12 @@ import Control.Monad(liftM,ap)
 
 import Term
 import BuildTerm
+import Subst
 
 data HeapLoc = HeapEntry {
-  locVal    :: !TVarName,
-  locPerms  :: !(Term -> TermB () Term)
+  locName   :: !TVarName,
+  locVal    :: !Term,
+  locPerms  :: !Term
 }
 
 data PathConstraint =
@@ -16,6 +18,7 @@ data PathConstraint =
 
 data HeapState = HeapState {
   heapContext       :: !TermContext,
+  -- XXX: valmap defs
   heapLocs          :: ![HeapLoc],
   heapConstraints   :: ![PathConstraint],
   heapNext          :: !Int
@@ -56,27 +59,27 @@ termB b = Heap \_ s ->
       !s1 = s { heapContext = newCtxt }
   in pure (Right res, s1)
 {-# inline termB #-}
-  
 
--- The complexity of this looks pretty bad
-remove :: [HeapLoc] -> (Term -> TermB () Term) -> ([HeapLoc], Term -> TermB () Term)
+
+
+-- | ^ `(newLocs, missingPerms) <- remove locs (r,perms)`
+-- After doing this we need to prove that `forall r. missingPerms == 0`.
+remove ::
+  [HeapLoc] {- ^ Relevant locations in the heap -} ->
+  (# TVarName, Term #) {- ^ Function describing the permissions we need -} ->
+  TermB s ([HeapLoc], Term)
+  -- ^ Update heap locations, and any permissions we didn't get.
 remove = go []
   where
-  go done locs needed =
+  go done locs (# needVar, needed #) =
     case locs of
-      [] -> (done, needed)
-      loc : more -> go (newLoc : done) more newNeeded  
-        where
-        cur r =
-          do permT <- locPerms loc r
-             needT <- needed r
-             cond  <- term (TOp2 Lt permT needT)
-             smaller <- term (TITE cond permT needT)
-             pure (smaller, permT, needT)
-        newNeeded r =
-          do (curT, _, needT) <- cur r
-             term (TOp2 Sub needT curT)
-        newPerms r =
-          do (curT, permT, _)  <- cur r
-             term (TOp2 Sub permT curT)
-        newLoc = loc { locPerms = newPerms }
+      [] -> pure (done, needed)
+      loc : more ->
+        do thisPerms <- renameVar (locName loc) needVar (locPerms loc)
+           cond      <- term (TOp2 Lt thisPerms needed)
+           smaller   <- term (TITE cond thisPerms needed)
+           newNeeded <- term (TOp2 Sub needed smaller)
+           smaller'  <- renameVar needVar (locName loc) smaller
+           newPerms  <- term (TOp2 Sub thisPerms smaller')
+           let newLoc = loc { locPerms = newPerms }
+           go (newLoc : done) more (# needVar, newNeeded #)  

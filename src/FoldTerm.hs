@@ -1,4 +1,4 @@
-module FoldTerm(foldTerm, foldTermB) where
+module FoldTerm(foldTerm, foldTermB, foldTermB', Cache, noCache) where
 
 import Data.IntMap qualified as IntMap
 
@@ -6,18 +6,27 @@ import Term
 import BuildTerm
 
 foldTermB :: (Term -> TermF a -> TermB s a) -> Term -> TermB s a
-foldTermB f t0 = withUser mempty (go t0)
+foldTermB f t0 = withUser noCache (foldTermB' f t0)
+
+
+newtype Cache a = Cache (IntMap.IntMap a)
+
+noCache :: Cache a
+noCache = Cache mempty
+
+foldTermB' :: (Term -> TermF a -> TermB s a) -> Term -> TermB (Cache a, s) a
+foldTermB' f t0 = go t0
   where
   go te =
     do let tid = termId te
            doWork x =
              do a <- liftUser (f te x)
-                updUser \(cache,user) ->
+                updUser \(Cache cache,user) ->
                   let !c = IntMap.insert tid a cache
-                  in (c,user)
+                  in (Cache c,user)
                 pure a
                
-       (cache,_) <- getUser
+       (Cache cache,_) <- getUser
        case IntMap.lookup tid cache of
          Just a -> pure a
          Nothing ->

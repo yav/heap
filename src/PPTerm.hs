@@ -27,10 +27,10 @@ class PP t where
   pp :: (?ppConfig :: PPConfig) => t -> Doc
 
 instance PP TVarName where
-  pp (TVarName x t) = withTypeMaybe ("x" <> int x) t
+  pp x = withTypeMaybe ("x" <> int (tvarId x)) (tvarType x)
 
 instance PP TFunName where
-  pp (TFunName f t) = withTypeMaybe ("F" <> int f) t
+  pp f = withTypeMaybe ("F" <> int (tfunId f)) (tfunResType f)
 
 withTypeMaybe :: (?ppConfig :: PPConfig) => Doc -> Type -> Doc
 withTypeMaybe d t

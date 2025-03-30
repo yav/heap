@@ -60,6 +60,9 @@ instance TypeOf TVarName where
 instance TypeOf TFunName where
   typeOf (TFunName _ t) = t
 
+instance TypeOf Term where
+  typeOf = typeOf . termF
+
 instance TypeOf term => TypeOf (TermF term) where
   typeOf t =
     case t of
