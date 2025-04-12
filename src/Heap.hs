@@ -64,29 +64,21 @@ termB b = Heap \_ s ->
 Heap
 ====
 
-A heap chunk for an array:
+An allocation for an array of `a`s (1 is a special case).
+XXX: instead of using implicit indexing and index-element isomorphism as in paper
+we can just user arrays.
 
 { base:       Address     -- the base of the object (i.e., its identity)
-, value:      Array a     -- keeps track of the location stored here
-, accessible: bool        -- what parts are known to exist (i.e, can be written)
-                          -- implicit free variable is the index, `i: size_t`
-, readable: bool          -- what parts are known to be readable (e.g., are initialized)
-                          -- implicit free variable is the index, `i: size_t`
+, index:      TermVar     -- Binder.  In scope in the following 3 fields/
+, value:      Term (a)    -- keeps track of the location stored here
+, accessible: Term (bool) -- what parts are known to exist (i.e, can be written)
+, readable:   Term (bool) -- what parts are known to be readable (e.g., are initialized)
 }
 Notes:
   * to read something we need *both* accessible and readable.
   * to work with slices (i.e., a sub array), we have to adjust the indexed as needed.
-  * an array of structs can be represented as multiple arrays, one per field.
-  * an array of arrays can be represented as a single flat array with adjusted indexes
-  * XXX: how to represent converting to bytes?  Each basic type has a way to be serialized
-    to bytes.  Perhaps the representatin of pointers can indicate if we need to apply serializers,
-    and adjust indexes as needed.
 
-Example:
-  array i {a: int, b: char} -> {a: array i int, b: array i char }
-  array i (array j int)     -> array (i * j) int
-
-Example (ignore `readbale` for simplcity)
+Example (ignore `readbale` for simplcity, and index is always `i`)
 
 Source:
   f(p: pointer);
@@ -132,32 +124,16 @@ read q[0]
 Pointers
 ========
 
-A pointer is a pair for an array allocation, and the offset in it.
-Allocations are described by the following structure.
+A pointer is a pair of an allocation identifier and a "path" in it.
 
-data Alloc =
-    Prim TVarName
-  | Struct [(Label,Alloc)]    -- A pointer to a struct
-  | Nest Alloc Term           -- Array of arrays o fthe given size
+If we use a structured memory model paths would be something like this:
 
+data Path =
+    Here
+  | FieldOf Path Label
+  | IndexOf Path Term
 
-Example of array indexing / incrementing a pointer:
-
-(p,n): ptr to array of { a: array of K int, b: int }
-p = (Struct [(a,Nest Y K), (b,Prim X)],n)   -- the array for the a and b fields
-
-p[i]: ptr to { a: array of K int, b: int }
-p[i] = ({a,b},n+i)
-
-p[i].a: ptr to array of K int
-p[i].a = (Nest Y K, n+i)
-
-p[i].a[j]: ptr to int
-p[i].a[j] = (Y, n+i+(K*j))
-
-
-XXX: Pointer difference
-
+For a flat "byte oriented" models, paths would be just an index (i.e., a Term)
 -}
 
 
@@ -177,7 +153,7 @@ remove = go []
       loc : more ->
         do thisPerms <- renameVar (locName loc) needVar (locPerms loc)
            cond      <- term (TOp2 Lt thisPerms needed)
-           smaller   <- term (TITE cond thisPerms needed)
+           smaller   <- term (TOp3 ITE cond thisPerms needed)
            newNeeded <- term (TOp2 Sub needed smaller)
            smaller'  <- renameVar needVar (locName loc) smaller
            newPerms  <- term (TOp2 Sub thisPerms smaller')
