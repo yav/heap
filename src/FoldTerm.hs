@@ -42,11 +42,11 @@ foldTermB' f t0 = go t0
                do x <- go t1
                   y <- go t2
                   doWork (TOp2 op x y)
-             TITE t1 t2 t3 ->
+             TOp3 op t1 t2 t3 ->
                do x <- go t1
                   y <- go t2
                   z <- go t3
-                  doWork (TITE x y z)
+                  doWork (TOp3 op x y z)
 {-# INLINE foldTermB #-}
 
 foldTerm :: (Term -> TermF a -> a) -> Term -> a

@@ -66,7 +66,11 @@ opPrec term
           Lt  -> ("<",6)
           And -> ("&&",11)
           Or  -> ("||",10)
-      TITE {} -> ("?",13)
+          ArrayGet -> ("[]",1)
+      TOp3 op _ _ _ ->
+        case op of
+          ITE -> ("?",13)
+          ArraySet -> ("[=]",1)
 
 instance PP Type where
   pp t =
@@ -74,6 +78,7 @@ instance PP Type where
       Integer  -> "int"
       Boolean  -> "bool"
       Rational -> "ratio"
+      Array el -> pp el <> "[]"
       Location -> "pointer"
 
 instance PP Term where
@@ -94,26 +99,32 @@ instance PP Term where
             (_,sub)    = opPrec (termF t)
         in opD <+> if sub > mine then parens d else d
   
-      TOp2 _ d1 d2 ->
-          let (opD, mine) = opPrec selfF
-              (t1,t2)     = case termF self of
-                              TOp2 _ a b -> (a,b)
-                              _          -> error "ppTerm: self mismatch TOp2"
-              (_, subL)   = opPrec (termF t1)
-              (_, subR)   = opPrec (termF t2)
-              d1'         = if subL > mine  then parens d1 else d1
-              d2'         = if subR >= mine then parens d2 else d2
-          in hang d1' 2 (opD <+> d2')
+      TOp2 op d1 d2 ->
+        case op of
+          ArrayGet -> d1 <> brackets d2
+          _ ->
+            let (opD, mine) = opPrec selfF
+                (t1,t2)     = case termF self of
+                                TOp2 _ a b -> (a,b)
+                                _          -> error "ppTerm: self mismatch TOp2"
+                (_, subL)   = opPrec (termF t1)
+                (_, subR)   = opPrec (termF t2)
+                d1'         = if subL > mine  then parens d1 else d1
+                d2'         = if subR >= mine then parens d2 else d2
+            in hang d1' 2 (opD <+> d2')
   
-      TITE d1 d2 d3 ->
-        let (_, mine) = opPrec selfF
-            (t1,t3)   = case termF self of
-                          TITE a _ b -> (a,b)
-                          _          -> error "ppTerm: self mismatch TITE"
-            (_, p1)   = opPrec (termF t1)
-            (_, p3)   = opPrec (termF t3)
-            d1'       = if p1 >= mine then parens d1 else d1
-            d3'       = if p3 >  mine then parens d3 else d3
-        in hang d1' 2 (hang ("?" <+> d2) 2 (":" <+> d3'))
+      TOp3 op d1 d2 d3 ->
+        case op of
+          ArraySet -> d1 <> brackets (d2 <+> "=" <+> d3)
+          ITE ->
+            let (_, mine) = opPrec selfF
+                (t1,t3)   = case termF self of
+                              TOp3 _ a _ b -> (a,b)
+                              _            -> error "ppTerm: self mismatch TITE"
+                (_, p1)   = opPrec (termF t1)
+                (_, p3)   = opPrec (termF t3)
+                d1'       = if p1 >= mine then parens d1 else d1
+                d3'       = if p3 >  mine then parens d3 else d3
+            in hang d1' 2 (hang ("?" <+> d2) 2 (":" <+> d3'))
   
 

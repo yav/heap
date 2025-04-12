@@ -18,7 +18,9 @@ instance Ord TFunName where
 
 
 
-data Type = Boolean | Integer | Rational | Location
+data Type = Boolean | Integer | Rational
+          | Array Type -- do we need index type?
+          | Location
   deriving (Eq,Ord)
 
 data Op1  = Neg | Not | App1 TFunName
@@ -27,8 +29,12 @@ data Op1  = Neg | Not | App1 TFunName
 data Op2  = Add | Sub | Mul | Div | Mod
           | Eq | Leq | Lt
           | And | Or
+          | ArrayGet
   deriving (Eq,Ord)
 
+data Op3  = ITE
+          | ArraySet
+  deriving (Eq,Ord)
 
 data TermF term =
     TVar !TVarName
@@ -37,7 +43,7 @@ data TermF term =
   | TRat !Rational
   | TOp1 !Op1 !term
   | TOp2 !Op2 !term !term
-  | TITE !term !term !term
+  | TOp3 !Op3 !term !term !term
     deriving (Eq,Ord,Functor)
   
 data Term = Term
@@ -89,6 +95,14 @@ instance TypeOf term => TypeOf (TermF term) where
           Lt  -> Boolean
           And -> Boolean
           Or  -> Boolean
+          ArrayGet ->
+            case typeOf t1 of
+              Array el -> el
+              _        -> error "ArrayGet: not an array"
+      
 
-      TITE _ t1 _ -> typeOf t1
+      TOp3 op _t1 _t2 t3 ->
+        case op of
+          ITE      -> typeOf t3
+          ArraySet -> typeOf t3
     

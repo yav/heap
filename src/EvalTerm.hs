@@ -7,23 +7,26 @@ type Builder m = TermF Term -> m Term
 evalBuild :: Monad m => Builder m -> Builder m
 evalBuild doBuild = \sub ->  
   case sub of
-    TVar {}       -> doBuild sub
-    TBool {}      -> doBuild sub
-    TInt {}       -> doBuild sub
-    TRat {}       -> doBuild sub
-    TOp1 op t     -> evalOp1 doBuild op t
-    TOp2 op t1 t2 -> evalOp2 doBuild op t1 t2
-    TITE t1 t2 t3 -> evalITE doBuild t1 t2 t3
+    TVar {}           -> doBuild sub
+    TBool {}          -> doBuild sub
+    TInt {}           -> doBuild sub
+    TRat {}           -> doBuild sub
+    TOp1 op t         -> evalOp1 doBuild op t
+    TOp2 op t1 t2     -> evalOp2 doBuild op t1 t2
+    TOp3 op t1 t2 t3  -> evalOp3 doBuild op t1 t2 t3
 {-# inline evalBuild #-}
 
 
-evalITE :: Monad m => Builder m -> Term -> Term -> Term -> m Term
-evalITE doBuild cond t2 t3 =
-  case termF cond of
-    TBool b             -> pure $! if b then t2 else t3
-    _ | t2 == t3        -> pure t2
-    _                   -> doBuild (TITE cond t2 t3)
-{-# inline evalITE #-}
+evalOp3 :: Monad m => Builder m -> Op3 -> Term -> Term -> Term -> m Term
+evalOp3 doBuild op t1 t2 t3 =
+  case op of
+    ITE ->
+      case termF t1 of
+        TBool b             -> pure $! if b then t2 else t3
+        _ | t2 == t3        -> pure t2
+        _                   -> doBuild (TOp3 ITE t1 t2 t3)
+    ArraySet -> doBuild (TOp3 ArraySet t1 t2 t3)
+{-# inline evalOp3 #-}
 
 
 evalOp1 :: Monad m => Builder m -> Op1 -> Term -> m Term
@@ -117,7 +120,7 @@ evalOp2 doBuild = go
       -- What's a good way to avoid creating all intermediate terms?
       -- (e.g., 1 + (2 + 3) ~> 1 + 5 ~> 6  (don't need a 5 term)
 
-      
+
       -- symbolic
       (_, _, _)                     -> doBuild (TOp2 op t1 t2)
 {-# inline evalOp2 #-}  

@@ -147,12 +147,9 @@ smtTerm = foldTerm \self tf ->
       TInt n  -> mkLit self (SMT.int n)
       TRat r  -> mkLit self (SMT.real r)
 
-      TOp1 op t     -> op1 self op t
-      TOp2 op t1 t2 -> op2 self op t1 t2 
-      TITE c t1 t2 ->
-        mkDef self (SMT.ite (smt c) (smt t1) (smt t2))
-                   (decls c <> decls t1 <> decls t2)
-
+      TOp1 op t         -> op1 self op t
+      TOp2 op t1 t2     -> op2 self op t1 t2 
+      TOp3 op t1 t2 t3  -> op3 self op t1 t2 t3
 
 smtType :: Type -> SMT.SExpr
 smtType ty =
@@ -160,6 +157,7 @@ smtType ty =
     Boolean  -> SMT.tBool
     Integer  -> SMT.tInt
     Rational -> SMT.tReal
+    Array el -> SMT.tArray SMT.tInt (smtType el)
     Location -> error "Location: XXX" 
  
 smtVarName :: TVarName -> String
@@ -189,14 +187,24 @@ op2 self op arg1 arg2 =
   where
   fu =
     case op of
-      Add -> SMT.add
-      Sub -> SMT.sub
-      Mul -> SMT.mul
-      Div -> SMT.div
-      Mod -> SMT.mod
-      Eq  -> SMT.eq
-      Leq -> SMT.leq
-      Lt  -> SMT.lt
-      And -> SMT.and
-      Or  -> SMT.or
+      Add      -> SMT.add
+      Sub      -> SMT.sub
+      Mul      -> SMT.mul
+      Div      -> SMT.div
+      Mod      -> SMT.mod
+      Eq       -> SMT.eq
+      Leq      -> SMT.leq
+      Lt       -> SMT.lt
+      And      -> SMT.and
+      Or       -> SMT.or
+      ArrayGet -> SMT.select
   
+
+op3 :: Term -> Op3 -> SMT -> SMT -> SMT -> SMT
+op3 self op arg1 arg2 arg3 =
+  mkDef self (fu (smt arg1) (smt arg2) (smt arg3)) (decls arg1 <> decls arg2 <> decls arg3)
+  where
+  fu =
+    case op of
+      ITE      -> SMT.ite
+      ArraySet -> SMT.store

@@ -4,7 +4,7 @@ module Term
   , T.TermF(..)
   , T.TVarName, tvarId, tvarType
   , T.TFunName, tfunId, tfunResType
-  , T.Op1(..), T.Op2(..)
+  , T.Op1(..), T.Op2(..), T.Op3(..)
   , T.Term, termId, termF
   , T.TypeOf(..)
   ) where

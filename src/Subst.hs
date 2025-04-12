@@ -43,5 +43,5 @@ substWith su = foldTermB' \self selfF ->
     TRat {}         -> pure self
     TOp1 op t       -> term (TOp1 op t)
     TOp2 op t1 t2   -> term (TOp2 op t1 t2)
-    TITE c t1 t2    -> term (TITE c t1 t2)
+    TOp3 op t1 t2 t3-> term (TOp3 op t1 t2 t3)
 {-# inline substWith #-}
