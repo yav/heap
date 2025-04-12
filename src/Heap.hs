@@ -1,25 +1,37 @@
 module Heap where
 
 import Control.Monad(liftM,ap)
+import Data.IntMap(IntMap)
+import Data.IntMap qualified as IntMap
 
 import Term
 import BuildTerm
 import Subst
 
-data HeapLoc = HeapEntry {
-  locName   :: !TVarName,
-  locVal    :: !Term,
-  locPerms  :: !Term
-}
 
 data PathConstraint =
     Assume Term
   | XXX
 
+-- | Facts about a particular allocation.
+data Allocation = Allocation {
+  locVal        :: !Term,       -- ^ Value of element
+  locAccessible :: !Term,       -- ^ Can we access location
+  locWrite      :: !Term,       -- ^ If the location was accessible, could we write to it. 
+  locRead       :: !Term        -- ^ If the location was accessible, could we read from it.
+}
+
+-- | What kind of allocation we have.
+data AllocArray = AllocMany {
+  locIndex  :: !TVarName,
+  locAllocs :: [Allocation]
+}
+
+-- | The state of the heap.
 data HeapState = HeapState {
   heapContext       :: !TermContext,
   -- XXX: valmap defs
-  heapLocs          :: ![HeapLoc],
+  heapAllocs        :: !(IntMap AllocArray),
   heapConstraints   :: ![PathConstraint],
   heapNext          :: !Int
 }
@@ -49,35 +61,30 @@ instance Monad Heap where
            in m1 r s1
   {-# inline (>>=) #-}
 
+getState :: Heap HeapState
+getState = Heap \_ s -> pure (Right s, s)
+{-# inline getState #-}
+
+setState :: HeapState -> Heap ()
+setState s = Heap \_ _ -> pure (Right (), s)
+{-# inline setState #-}
+
 termB :: TermB () a -> Heap a
-termB b = Heap \_ s ->
-  let (res,newCtxt) =
-        buildInContext () (heapContext s)
-        do a <- b
-           c <- getContext
-           pure (a,c)
-      !s1 = s { heapContext = newCtxt }
-  in pure (Right res, s1)
+termB b = 
+  do s <- getState
+     let (res,newCtxt) =
+           buildInContext () (heapContext s)
+           do a <- b
+              c <- getContext
+              pure (a,c)
+         !s1 = s { heapContext = newCtxt }
+     setState s1
+     pure res
 {-# inline termB #-}
 
+
+
 {-
-Heap
-====
-
-An allocation for an array of `a`s (1 is a special case).
-XXX: instead of using implicit indexing and index-element isomorphism as in paper
-we can just user arrays.
-
-{ base:       Address     -- the base of the object (i.e., its identity)
-, index:      TermVar     -- Binder.  In scope in the following 3 fields/
-, value:      Term (a)    -- keeps track of the location stored here
-, accessible: Term (bool) -- what parts are known to exist (i.e, can be written)
-, readable:   Term (bool) -- what parts are known to be readable (e.g., are initialized)
-}
-Notes:
-  * to read something we need *both* accessible and readable.
-  * to work with slices (i.e., a sub array), we have to adjust the indexed as needed.
-
 Example (ignore `readbale` for simplcity, and index is always `i`)
 
 Source:
@@ -138,24 +145,40 @@ For a flat "byte oriented" models, paths would be just an index (i.e., a Term)
 
 
 
--- | ^ `(newLocs, missingPerms) <- remove locs (r,perms)`
--- After doing this we need to prove that `forall r. missingPerms == 0`.
-remove ::
-  [HeapLoc] {- ^ Relevant locations in the heap -} ->
-  (# TVarName, Term #) {- ^ Function describing the permissions we need -} ->
-  TermB s ([HeapLoc], Term)
-  -- ^ Update heap locations, and any permissions we didn't get.
-remove = go []
-  where
-  go done locs (# needVar, needed #) =
-    case locs of
-      [] -> pure (done, needed)
-      loc : more ->
-        do thisPerms <- renameVar (locName loc) needVar (locPerms loc)
-           cond      <- term (TOp2 Lt thisPerms needed)
-           smaller   <- term (TOp3 ITE cond thisPerms needed)
-           newNeeded <- term (TOp2 Sub needed smaller)
-           smaller'  <- renameVar needVar (locName loc) smaller
-           newPerms  <- term (TOp2 Sub thisPerms smaller')
-           let newLoc = loc { locPerms = newPerms }
-           go (newLoc : done) more (# needVar, newNeeded #)  
+
+removeAccessAlloc ::
+  Allocation {- ^ Facts about an allocation -} -> 
+  Term       {- ^ Identifies what to remove access to -} ->
+  TermB s (Allocation, Term)
+  -- ^ Updated allocation, and additional access we need.
+removeAccessAlloc loc needed =
+  do let have = locAccessible loc
+     notNeeded <- term (TOp1 Not needed)
+     newHave   <- term (TOp2 And have notNeeded)
+     notHave   <- term (TOp1 Not have)
+     newNeeded <- term (TOp2 And needed notHave)
+     let !newLoc = loc { locAccessible = newHave }
+     pure (newLoc, newNeeded)
+
+removeAccessAllocs :: [Allocation] -> [Allocation] -> Term -> TermB s ([Allocation], Term)
+removeAccessAllocs done todo needed =
+  case todo of
+     [] -> pure (done, needed)
+     a : more ->
+      do (a', newNeeded) <- removeAccessAlloc a needed
+         removeAccessAllocs (a' : done) more newNeeded
+
+
+removeArrayAccess :: Int -> (TVarName -> TermB () Term) -> Heap ()
+removeArrayAccess n perms =
+  do s <- getState
+     case IntMap.lookup n (heapAllocs s) of
+       Just as ->
+         do need <- termB (perms (locIndex as))
+            (as', missing) <- termB (removeAccessAllocs [] (locAllocs as) need)
+            -- XXX: check forall (locIndex as). !missing
+            let !newAll = as { locAllocs = as' } 
+                !newHeap = s { heapAllocs = IntMap.insert n newAll (heapAllocs s) }
+            setState newHeap
+              
+       Nothing -> error "removeAccess: invalid allocation"
